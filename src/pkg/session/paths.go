@@ -3,6 +3,7 @@
 package session
 
 import (
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
