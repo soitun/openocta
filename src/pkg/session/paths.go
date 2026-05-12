@@ -53,6 +53,9 @@ func SanitizeForSessionID(s string) string {
 
 // ResolveAgentSessionsDir returns the sessions directory for an agent.
 func ResolveAgentSessionsDir(agentID string, env func(string) string) string {
+	if env == nil {
+		env = os.Getenv
+	}
 	stateDir := paths.ResolveStateDir(env)
 	id := normalizeAgentID(agentID)
 	return filepath.Join(stateDir, "agents", id, "sessions")

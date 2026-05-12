@@ -21,6 +21,9 @@ const (
 // Override via OPENOCTA_STATE_DIR or CLAWDBOT_STATE_DIR.
 // Default: ~/.openocta on Linux/macOS, %APPDATA%\openocta on Windows.
 func ResolveStateDir(env func(string) string) string {
+	if env == nil {
+		env = os.Getenv
+	}
 	override := strings.TrimSpace(env("OPENOCTA_STATE_DIR"))
 	if override == "" {
 		override = strings.TrimSpace(env("CLAWDBOT_STATE_DIR"))
@@ -63,6 +66,9 @@ func ResolveStateDir(env func(string) string) string {
 // Override via OPENOCTA_CONFIG_PATH or CLAWDBOT_CONFIG_PATH.
 // Default: $STATE_DIR/openocta.json
 func ResolveConfigPath(env func(string) string, stateDir string) string {
+	if env == nil {
+		env = os.Getenv
+	}
 	override := strings.TrimSpace(env("OPENOCTA_CONFIG_PATH"))
 	if override == "" {
 		override = strings.TrimSpace(env("CLAWDBOT_CONFIG_PATH"))
@@ -84,6 +90,9 @@ func ResolveConfigPath(env func(string) string, stateDir string) string {
 
 // ResolveCanonicalConfigPath returns the canonical config path regardless of existence.
 func ResolveCanonicalConfigPath(env func(string) string, stateDir string) string {
+	if env == nil {
+		env = os.Getenv
+	}
 	override := strings.TrimSpace(env("OPENOCTA_CONFIG_PATH"))
 	if override == "" {
 		override = strings.TrimSpace(env("CLAWDBOT_CONFIG_PATH"))
@@ -101,6 +110,9 @@ func DefaultGatewayPort() int {
 
 // ResolveGatewayPort returns the gateway port from config or env.
 func ResolveGatewayPort(portFromConfig *int, env func(string) string) int {
+	if env == nil {
+		env = os.Getenv
+	}
 	envRaw := strings.TrimSpace(env("OPENOCTA_GATEWAY_PORT"))
 	if envRaw == "" {
 		envRaw = strings.TrimSpace(env("CLAWDBOT_GATEWAY_PORT"))
@@ -119,6 +131,9 @@ func ResolveGatewayPort(portFromConfig *int, env func(string) string) int {
 
 // ResolveOAuthDir returns the OAuth credentials directory.
 func ResolveOAuthDir(env func(string) string, stateDir string) string {
+	if env == nil {
+		env = os.Getenv
+	}
 	override := strings.TrimSpace(env("OPENOCTA_OAUTH_DIR"))
 	if override != "" {
 		return expandUserPath(override, env)
@@ -127,6 +142,9 @@ func ResolveOAuthDir(env func(string) string, stateDir string) string {
 }
 
 func resolveHomeDir(env func(string) string) string {
+	if env == nil {
+		env = os.Getenv
+	}
 	home := env("OPENOCTA_HOME")
 	if home == "" {
 		home = env("HOME")
@@ -155,6 +173,9 @@ func resolveHomeDir(env func(string) string) string {
 }
 
 func expandUserPath(input string, env func(string) string) string {
+	if env == nil {
+		env = os.Getenv
+	}
 	input = strings.TrimSpace(input)
 	if input == "" {
 		return input
