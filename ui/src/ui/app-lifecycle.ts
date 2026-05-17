@@ -58,8 +58,23 @@ export function handleConnected(host: LifecycleHost) {
   }
 }
 
+type ProductTourHost = LifecycleHost & {
+  onboarding?: boolean;
+  productTourActive: boolean;
+  productTourStartTimer: number | null;
+  maybeStartProductTour: () => void;
+};
+
 export function handleFirstUpdated(host: LifecycleHost) {
   observeTopbar(host as unknown as Parameters<typeof observeTopbar>[0]);
+  const tourHost = host as unknown as ProductTourHost;
+  if (tourHost.productTourStartTimer != null) {
+    window.clearTimeout(tourHost.productTourStartTimer);
+  }
+  tourHost.productTourStartTimer = window.setTimeout(() => {
+    tourHost.productTourStartTimer = null;
+    tourHost.maybeStartProductTour();
+  }, 400);
 }
 
 export function handleDisconnected(host: LifecycleHost) {

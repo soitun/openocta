@@ -7,7 +7,12 @@ import type { ExecApprovalRequest } from "./controllers/exec-approval.ts";
 import type { ExecApprovalsFile, ExecApprovalsSnapshot } from "./controllers/exec-approvals.ts";
 import type { SkillMessage } from "./controllers/skills.ts";
 import type { GatewayBrowserClient, GatewayHelloOk } from "./gateway.ts";
-import type { Tab } from "./navigation.ts";
+import {
+  getProductTourSteps,
+  markProductTourCompleted,
+  shouldShowProductTour,
+  type Tab,
+} from "./navigation.ts";
 import type { ResolvedTheme, ThemeMode } from "./theme.ts";
 import type {
   AgentsListResult,
@@ -128,6 +133,9 @@ export class OpenClawApp extends LitElement implements NativeDialogInvoker {
   @state() password = "";
   @state() tab: Tab = "message";
   @state() onboarding = resolveOnboardingMode();
+  @state() productTourActive = false;
+  @state() productTourStepIndex = 0;
+  private productTourStartTimer: number | null = null;
   @state() isDesktopShell = isDesktopShell();
   @state() isWindowsDesktop = false;
   @state() isWindowMaximised = false;
@@ -629,6 +637,10 @@ export class OpenClawApp extends LitElement implements NativeDialogInvoker {
   }
 
   disconnectedCallback() {
+    if (this.productTourStartTimer != null) {
+      window.clearTimeout(this.productTourStartTimer);
+      this.productTourStartTimer = null;
+    }
     unregisterNativeDialogInvoker(this);
     document.removeEventListener("keydown", this.sessionOverflowEscapeHandler);
     this.teardownDesktopWindowChrome();
@@ -806,6 +818,45 @@ export class OpenClawApp extends LitElement implements NativeDialogInvoker {
 
   dismissApprovalBanner() {
     this.approvalBannerVisible = false;
+  }
+
+  maybeStartProductTour() {
+    if (this.onboarding || this.productTourActive) {
+      return;
+    }
+    if (!shouldShowProductTour()) {
+      return;
+    }
+    const steps = getProductTourSteps();
+    if (steps.length === 0) {
+      return;
+    }
+    this.productTourActive = true;
+    this.productTourStepIndex = 0;
+    this.setTab(steps[0]!.tab);
+  }
+
+  productTourNext() {
+    const steps = getProductTourSteps();
+    if (!this.productTourActive || steps.length === 0) {
+      return;
+    }
+    if (this.productTourStepIndex >= steps.length - 1) {
+      this.finishProductTour();
+      return;
+    }
+    this.productTourStepIndex += 1;
+    this.setTab(steps[this.productTourStepIndex]!.tab);
+  }
+
+  productTourSkip() {
+    this.finishProductTour();
+  }
+
+  private finishProductTour() {
+    markProductTourCompleted();
+    this.productTourActive = false;
+    this.productTourStepIndex = 0;
   }
 
   handleGatewayUrlConfirm() {

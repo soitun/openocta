@@ -21,6 +21,7 @@ export type Tab =
   | "toolLibrary"
   | "modelLibrary"
   | "tutorials"
+  | "documentation"
   | "aboutUs"
   | "community"
   | "agents"
@@ -53,6 +54,7 @@ const TAB_PATHS: Record<Tab, string> = {
   toolLibrary: "/tool-library",
   modelLibrary: "/model-library",
   tutorials: "/tutorials",
+  documentation: "/documentation",
   aboutUs: "/about-us",
   community: "/community",
   agents: "/agents",
@@ -195,6 +197,8 @@ export function iconForTab(tab: Tab, active = false): IconName {
       return "modelCube";
     case "tutorials":
       return "book";
+    case "documentation":
+      return "documentation";
     case "aboutUs":
       return "info";
     case "community":
@@ -262,6 +266,8 @@ export function titleForTab(tab: Tab) {
       return "模型库";
     case "tutorials":
       return "教程";
+    case "documentation":
+      return "在线文档";
     case "aboutUs":
       return "关于我们";
     case "community":
@@ -311,6 +317,79 @@ export function titleForTab(tab: Tab) {
   }
 }
 
+/** Bump when product-tour copy or steps change; completion is tracked per version. */
+export const PRODUCT_TOUR_VERSION = "v0.2.7";
+
+const PRODUCT_TOUR_STORAGE_KEY = "openocta.product-tour.completed.v1";
+
+export type ProductTourStep = {
+  tab: Tab;
+  title: string;
+  body: string;
+};
+
+/** First-run walkthrough steps (top bar order matches app-render top tabs). */
+export function getProductTourSteps(): ProductTourStep[] {
+  return [
+    {
+      tab: "modelLibrary",
+      title: "配置模型",
+      body: "在「模型」页添加模型厂商与可用模型，连接后即可为对话与 Agent 提供推理能力。",
+    },
+    {
+      tab: "message",
+      title: "开始对话",
+      body: "回到「消息」即可新建或选择会话，与助手聊天、执行任务，并查看历史记录。",
+    },
+    {
+      tab: "skillLibrary",
+      title: "探索技能库",
+      body: "在「技能库」浏览、安装社区技能，为 Agent 扩展文档处理、自动化等能力。",
+    },
+    {
+      tab: "toolLibrary",
+      title: "接入 MCP 工具",
+      body: "在「工具库」发现 MCP 服务与工具，一键接入数据库、浏览器、企业系统等外部能力。",
+    },
+    {
+      tab: "employeeMarket",
+      title: "数字员工",
+      body: "在「员工市场」挑选或启用数字员工模板，快速落地客服、运营、研发等角色化助手。",
+    },
+    {
+      tab: "scheduledTasks",
+      title: "定时任务",
+      body: "在「定时任务」配置巡检、周报、提醒等周期执行，让 Agent 按计划自动运行。",
+    },
+  ];
+}
+
+export function shouldShowProductTour(version: string = PRODUCT_TOUR_VERSION): boolean {
+  if (typeof localStorage === "undefined") {
+    return false;
+  }
+  try {
+    const raw = localStorage.getItem(PRODUCT_TOUR_STORAGE_KEY);
+    if (!raw) {
+      return true;
+    }
+    const parsed = JSON.parse(raw) as { version?: string };
+    return parsed.version !== version;
+  } catch {
+    return true;
+  }
+}
+
+export function markProductTourCompleted(version: string = PRODUCT_TOUR_VERSION): void {
+  if (typeof localStorage === "undefined") {
+    return;
+  }
+  localStorage.setItem(
+    PRODUCT_TOUR_STORAGE_KEY,
+    JSON.stringify({ version, completedAt: Date.now() }),
+  );
+}
+
 export function subtitleForTab(tab: Tab) {
   switch (tab) {
     case "message":
@@ -328,6 +407,8 @@ export function subtitleForTab(tab: Tab) {
     case "modelLibrary":
       return "";
     case "tutorials":
+      return "";
+    case "documentation":
       return "";
     case "aboutUs":
       return "";

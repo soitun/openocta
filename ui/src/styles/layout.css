@@ -1948,3 +1948,70 @@ button.nav-item {
 .emp-detail-content-empty {
   line-height: 24px;
 }
+
+/* First-run product tour */
+.shell--product-tour .topbar {
+  position: relative;
+  z-index: 201;
+}
+
+.top-tab--product-tour {
+  position: relative;
+  z-index: 202;
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: 0 0 0 2px var(--accent, #2563eb);
+  border-radius: var(--radius-sm, 6px);
+}
+
+.product-tour {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+}
+
+.product-tour__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.48);
+  pointer-events: auto;
+}
+
+.product-tour__card {
+  position: absolute;
+  left: 50%;
+  bottom: max(24px, env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  width: min(440px, calc(100vw - 32px));
+  padding: 20px 22px;
+  pointer-events: auto;
+  box-shadow: var(--shadow-lg, 0 20px 40px rgba(15, 23, 42, 0.18));
+}
+
+.product-tour__progress {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.product-tour__title {
+  margin: 0 0 10px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.product-tour__body {
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-regular);
+}
+
+.product-tour__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}

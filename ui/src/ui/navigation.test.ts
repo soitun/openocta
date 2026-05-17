@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  PRODUCT_TOUR_VERSION,
+  getProductTourSteps,
   getTabGroups,
   iconForTab,
   inferBasePathFromPathname,
+  markProductTourCompleted,
   normalizeBasePath,
   normalizePath,
   pathForTab,
+  shouldShowProductTour,
   subtitleForTab,
   tabFromPath,
   titleForTab,
@@ -204,6 +208,33 @@ describe("inferBasePathFromPathname", () => {
   it("handles index.html suffix", () => {
     expect(inferBasePathFromPathname("/index.html")).toBe("");
     expect(inferBasePathFromPathname("/ui/index.html")).toBe("/ui");
+  });
+});
+
+describe("product tour", () => {
+  it("defines six steps in onboarding order", () => {
+    const tabs = getProductTourSteps().map((s) => s.tab);
+    expect(tabs).toEqual([
+      "modelLibrary",
+      "message",
+      "skillLibrary",
+      "toolLibrary",
+      "employeeMarket",
+      "scheduledTasks",
+    ]);
+  });
+
+  it("shows tour until completed for current version", () => {
+    localStorage.clear();
+    expect(shouldShowProductTour()).toBe(true);
+    markProductTourCompleted();
+    expect(shouldShowProductTour()).toBe(false);
+    expect(shouldShowProductTour("other-version")).toBe(true);
+    localStorage.clear();
+  });
+
+  it("uses a stable product tour version constant", () => {
+    expect(PRODUCT_TOUR_VERSION).toMatch(/^v\d+\.\d+\.\d+/);
   });
 });
 

@@ -261,7 +261,8 @@ func New(ctx context.Context, opts Options) (*Runtime, error) {
 	}
 
 	apiOpts.Middleware = mw
-	apiOpts.Skylark = mergeSkylarkOptions(opts)
+	// Skylark 在运行时构建阶段强制关闭，不读取 OPENOCTA_SKYLARK / agents.defaults.skylark / opts.Skylark。
+	apiOpts.Skylark = &api.SkylarkOptions{Enabled: false}
 	if opts.EnableSystemPrompt {
 		if opts.SystemPromptOverrides != "" {
 			apiOpts.SystemPrompt = opts.SystemPromptOverrides
@@ -331,7 +332,7 @@ type Options struct {
 	EnableSystemPrompt bool
 	// SystemPromptOverrides if non-empty replaces the auto-built system prompt when EnableSystemPrompt is true.
 	SystemPromptOverrides string
-	// Skylark sets api.Options.Skylark directly; when nil, mergeSkylarkOptions uses OPENOCTA_SKYLARK, then agents.defaults.skylark; default off when unset.
+	// Skylark is ignored at runtime bootstrap (always disabled in New); kept for API compatibility.
 	Skylark *api.SkylarkOptions
 	// AgentRunTimeout bounds Run/RunStream when ctx has no deadline; zero uses OPENOCTA_AGENT_RUN_TIMEOUT or DefaultAgentRunTimeout (10m). See EnvAgentRunTimeout.
 	AgentRunTimeout time.Duration
@@ -349,89 +350,6 @@ type Options struct {
 	SessionHistoryTransform api.SessionHistoryTransform
 	// TokenLimit is api.Options.TokenLimit: when > 0, trims conversation history to an estimated token budget (e.g. from models.providers.*.models[].contextWindow).
 	TokenLimit int
-}
-
-// mergeSkylarkOptions resolves api.SkylarkOptions: explicit opts.Skylark wins; then OPENOCTA_SKYLARK; then agents.defaults.skylark; default disabled when env unset (see agentsdk-go docs/skylark.md).
-func mergeSkylarkOptions(opts Options) *api.SkylarkOptions {
-	if opts.Skylark != nil {
-		return withSkylarkOptimizations(opts.Skylark)
-	}
-	env := opts.Env
-	if env == nil {
-		env = func(string) string { return "" }
-	}
-	v := strings.TrimSpace(strings.ToLower(env("OPENOCTA_SKYLARK")))
-	if v == "0" || v == "false" || v == "off" || v == "no" {
-		return &api.SkylarkOptions{Enabled: false}
-	}
-	if v == "1" || v == "true" || v == "yes" || v == "on" {
-		return withSkylarkOptimizations(&api.SkylarkOptions{Enabled: true})
-	}
-	if o := skylarkFromAgentDefaults(opts.Config); o != nil {
-		return withSkylarkOptimizations(o)
-	}
-	return &api.SkylarkOptions{Enabled: true}
-}
-
-func skylarkFromAgentDefaults(cfg *config.OpenOctaConfig) *api.SkylarkOptions {
-	if cfg == nil || cfg.Agents == nil || cfg.Agents.Defaults == nil || cfg.Agents.Defaults.Skylark == nil {
-		return nil
-	}
-	sk := cfg.Agents.Defaults.Skylark
-	if sk.Enabled == nil && sk.DataDir == "" && sk.DisableEmbedding == nil && sk.KeepAutoSkills == nil {
-		return nil
-	}
-	o := &api.SkylarkOptions{
-		DataDir: strings.TrimSpace(sk.DataDir),
-	}
-	if sk.Enabled != nil {
-		o.Enabled = *sk.Enabled
-	} else {
-		o.Enabled = true
-	}
-	if sk.DisableEmbedding != nil {
-		o.DisableEmbedding = *sk.DisableEmbedding
-	}
-	if sk.KeepAutoSkills != nil {
-		o.KeepAutoSkills = *sk.KeepAutoSkills
-	}
-	return o
-}
-
-// withSkylarkOptimizations applies agentsdk-go Skylark 的推荐默认参数（仅在启用 Skylark 时生效）。
-// 规则：调用方显式设置的字段优先；这里只在字段“未设置/为空/为0”时填充。
-//
-// 注意：本仓库当前 vendored 的 agentsdk-go SkylarkOptions 仅包含 one-shot routing 与默认 limit 等参数；
-// SDK-OPTIMIZATIONS.md 中提到的 mini-memory / prefetch / L2 project memory 等字段若未来进入 SDK，
-// 再在此处补齐映射即可。
-func withSkylarkOptimizations(o *api.SkylarkOptions) *api.SkylarkOptions {
-	if o == nil {
-		return nil
-	}
-	if !o.Enabled {
-		return o
-	}
-
-	// 默认限制值：SDK 内部也会提供默认值，但这里显式化便于团队统一调参。
-	if o.DefaultKnowledgeLimit == 0 {
-		o.DefaultKnowledgeLimit = 3
-	}
-	if o.DefaultCapabilitiesLimit == 0 {
-		o.DefaultCapabilitiesLimit = 2
-	}
-	if o.DefaultUnlockTopN == 0 {
-		o.DefaultUnlockTopN = 2
-	}
-
-	// 复问/继续类提示：命中这些词时强制 progressive（避免 one-shot 路由导致“复问忘记”）。
-	// 调用方若在配置中提供 ComplexityHints（非空），则尊重调用方，不覆盖。
-	if len(o.ComplexityHints) == 0 {
-		o.ComplexityHints = []string{
-			"继续", "上次", "之前", "再问", "复述", "回顾",
-			"continue", "again", "as before", "previously", "last time",
-		}
-	}
-	return o
 }
 
 func resolveApprovalQueueStorePath(s *config.SandboxConfig, env func(string) string) string {

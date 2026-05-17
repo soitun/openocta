@@ -59,7 +59,16 @@ import {
 } from "./controllers/skills.ts";
 import { loadUsage, loadSessionTimeSeries, loadSessionLogs } from "./controllers/usage.ts";
 import { icons } from "./icons.ts";
-import { normalizeBasePath, getTabGroups, iconForTab, pathForTab, subtitleForTab, titleForTab } from "./navigation.ts";
+import {
+  getProductTourSteps,
+  getTabGroups,
+  iconForTab,
+  normalizeBasePath,
+  pathForTab,
+  subtitleForTab,
+  titleForTab,
+} from "./navigation.ts";
+import { renderProductTour } from "./views/product-tour.ts";
 import { nativeAlert, nativeConfirm, nativePrompt } from "./native-dialog-bridge.ts";
 import { t } from "./strings.js";
 
@@ -347,6 +356,7 @@ import { renderTutorials } from "./views/tutorials.ts";
 import { requestDesktopClearWorkspace, requestDesktopUninstall } from "./controllers/desktop-uninstall.ts";
 import { openExternalUrl } from "./open-external-url.ts";
 import { renderAbout } from "./views/about.ts";
+import { ONLINE_DOCUMENTATION_URL, renderDocumentation } from "./views/documentation.ts";
 import { renderLlmTrace } from "./views/llm-trace.ts";
 import { renderSecurity } from "./views/security.ts";
 import { renderModels } from "./views/models.ts";
@@ -504,6 +514,7 @@ export function renderApp(state: AppViewState) {
     state.tab === "usage" ||
     state.tab === "sandbox" ||
     state.tab === "llmTrace" ||
+    state.tab === "documentation" ||
     state.tab === "aboutUs";
   const isCollapsibleNavPage = isMessagePage || isScheduledTasks || isConfigArea;
   const isSideNavCollapsed = isCollapsibleNavPage && state.settings.navCollapsed;
@@ -532,6 +543,13 @@ export function renderApp(state: AppViewState) {
       </button>
     </div>
   `;
+  const productTourSteps = getProductTourSteps();
+  const productTourStep =
+    state.productTourActive && productTourSteps.length > 0
+      ? productTourSteps[
+          Math.min(Math.max(0, state.productTourStepIndex), productTourSteps.length - 1)
+        ]
+      : null;
   const shellClasses = [
     "shell",
     isChat ? "shell--chat" : "",
@@ -540,6 +558,7 @@ export function renderApp(state: AppViewState) {
     chatFocus ? "shell--chat-focus" : "",
     isSideNavCollapsed ? "shell--nav-collapsed" : "",
     state.onboarding ? "shell--onboarding" : "",
+    state.productTourActive ? "shell--product-tour" : "",
     state.isWindowsDesktop ? "shell--windows-desktop" : "",
     state.isWindowMaximised ? "shell--window-maximised" : "",
   ]
@@ -627,9 +646,12 @@ export function renderApp(state: AppViewState) {
                 </button>
               `;
             }
+            const tourHighlight =
+              productTourStep?.tab === tab ? "top-tab--product-tour" : "";
             return html`
               <button
-                class="top-tab topbar__no-drag ${active ? "top-tab--active" : ""}"
+                class="top-tab topbar__no-drag ${active ? "top-tab--active" : ""} ${tourHighlight}"
+                data-tour-tab=${tab ?? ""}
                 @click=${() => state.setTab((tab === "config" ? "overview" : tab)!)}
                 type="button"
               >
@@ -1003,19 +1025,7 @@ export function renderApp(state: AppViewState) {
                           <span class="nav-label__text">资源</span>
                         </button>
                         <div class="nav-group__items">
-                          <button
-                            type="button"
-                            class="nav-item"
-                            title="打开在线文档"
-                            @click=${() =>
-                              void openExternalUrl("https://databuff.yuque.com/org-wiki-databuff-spr8e6/lqn7on", {
-                                gatewayHost: state.settings.gatewayUrl,
-                                gatewayToken: state.settings.token,
-                              })}
-                          >
-                            <span class="nav-item__icon" aria-hidden="true">${icons.documentation}</span>
-                            <span class="nav-item__text">在线文档</span>
-                          </button>
+                          ${renderTab(state, "documentation")}
                           ${renderTab(state, "aboutUs")}
                         </div>
                       </div>
@@ -1118,7 +1128,7 @@ export function renderApp(state: AppViewState) {
                       : html`<div class="nav-empty"></div>`
         }
       </aside>`}
-      <main class="content ${isChat ? "content--chat" : ""} ${isCatalogArea ? "content--catalog" : ""} ${state.tab === "tutorials" ? "content--tutorials" : ""} ${state.tab === "llmTrace" && state.llmTraceViewingSessionId != null ? "content--llm-trace-detail" : ""}">
+      <main class="content ${isChat ? "content--chat" : ""} ${isCatalogArea ? "content--catalog" : ""} ${state.tab === "tutorials" ? "content--tutorials" : ""} ${state.tab === "documentation" ? "content--documentation" : ""} ${state.tab === "llmTrace" && state.llmTraceViewingSessionId != null ? "content--llm-trace-detail" : ""}">
         ${isCatalogArea || isMessagePage
           ? nothing
           : html`
@@ -2596,6 +2606,18 @@ export function renderApp(state: AppViewState) {
         }
 
         ${
+          state.tab === "documentation"
+            ? renderDocumentation({
+                onOpenExternal: () =>
+                  void openExternalUrl(ONLINE_DOCUMENTATION_URL, {
+                    gatewayHost: state.settings.gatewayUrl,
+                    gatewayToken: state.settings.token,
+                  }),
+              })
+            : nothing
+        }
+
+        ${
           state.tab === "aboutUs"
             ? renderAbout({
                 basePath,
@@ -3831,6 +3853,13 @@ export function renderApp(state: AppViewState) {
           : nothing
       }
     </div>
+    ${renderProductTour({
+      active: state.productTourActive,
+      stepIndex: state.productTourStepIndex,
+      steps: productTourSteps,
+      onNext: () => state.productTourNext(),
+      onSkip: () => state.productTourSkip(),
+    })}
     ${renderNativeDialogOverlay({
       model: state.nativeDialog,
       promptValue: state.nativePromptInput,

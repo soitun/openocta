@@ -41,6 +41,8 @@ export type AppViewState = {
   password: string;
   tab: Tab;
   onboarding: boolean;
+  productTourActive: boolean;
+  productTourStepIndex: number;
   isDesktopShell: boolean;
   isWindowsDesktop: boolean;
   isWindowMaximised: boolean;
@@ -472,6 +474,8 @@ export type AppViewState = {
   handleNostrProfileToggleAdvanced: () => void;
   handleExecApprovalDecision: (decision: "allow-once" | "allow-always" | "deny") => Promise<void>;
   dismissApprovalBanner: () => void;
+  productTourNext: () => void;
+  productTourSkip: () => void;
   handleGatewayUrlConfirm: () => void;
   handleGatewayUrlCancel: () => void;
   handleConfigLoad: () => Promise<void>;
